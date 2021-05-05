@@ -4,6 +4,7 @@ import time
 import json
 
 from pyrogram import filters
+from pyrogram.raw.functions.account import UpdateStatus
 
 from bot import alemiBot
 
@@ -172,12 +173,13 @@ async def bully(client, message):
 	if message.chat.id in censoring["MASS"] \
 	and message.from_user.id not in censoring["FREE"]:
 		await message.delete()
+		await client.send(UpdateStatus(offline=True))
 	else:
 		if message.chat.id not in censoring["SPEC"] \
 		or message.from_user.id not in censoring["SPEC"][message.chat.id]:
 			return # Don't censor innocents!
 		await message.delete()
-	await client.set_offline()
+		await client.send(UpdateStatus(offline=True))
 
 async def get_user(arg, client):
 	if arg.isnumeric():
