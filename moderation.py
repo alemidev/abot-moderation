@@ -38,16 +38,21 @@ except:
 	logger.exception("Failed to load ongoing censor data")
 	# ignore
 
-HELP.add_help(["censor", "c"], "immediately delete messages",
-			"Start censoring someone in current chat. Use flag `-mass` to toggle mass censorship in current chat. " +
-			"Users made immune (`free` cmd) will not be affected by mass censoring, use flag `-i` to revoke immunity from someone. "+
-			"Use flag `-list` to get censored users in current chat. Messages from self will never be censored. " +
-			"More than one target can be specified. To free someone from censorship, use `.free` command. Instead of specifying targets, " +
-			"you can reply to someone.", args="[-list] [-mass] [-i] <targets>")
-@alemiBot.on_message(is_superuser & filterCommand(["censor", "c"], list(alemiBot.prefixes), flags=["-list", "-i", "-mass"]))
+@HELP.add(cmd="[<targets>]")
+@alemiBot.on_message(is_superuser & filterCommand(["censor"], list(alemiBot.prefixes), flags=["-list", "-i", "-mass"]))
 @report_error(logger)
 @set_offline
 async def censor_cmd(client, message):
+	"""delete messages sent by user
+
+	Start censoring someone in current chat.
+	Use flag `-mass` to toggle mass censorship in current chat.
+	Users made immune (`free` cmd) will not be affected by mass censoring, use flag `-i` to revoke immunity from someone._cmd
+	Use flag `-list` to get censored users in current chat. Messages from self will never be censored.
+	More than one target can be specified.
+	Instead of specifying targets, you can reply to someone.
+	To free someone from censorship, use `.free` command.
+	"""
 	global censoring
 	args = message.command
 	out = ""
@@ -102,15 +107,20 @@ async def censor_cmd(client, message):
 		with open("data/censoring.json", "w") as f:
 			json.dump(censoring, f)
 
-HELP.add_help(["free", "f", "stop"], "stop censoring someone",
-			"Stop censoring someone in current chat. Use flag `-mass` to stop mass censorship current chat. " +
-			"You can add `-i` to make target immune to mass censoring. More than one target can be specified (separate with spaces). " +
-			"Add `-list` flag to list immune users (censor immunity is global but doesn't bypass specific censorship). Instead of specifying " +
-			"targets, you can reply to someone.", args="[-list] [-mass] [-i] <targets>")
+@HELP.add(cmd="[<targets>]")
 @alemiBot.on_message(is_superuser & filterCommand(["free", "f", "stop"], list(alemiBot.prefixes), flags=["-list", "-i", "-mass"]))
 @report_error(logger)
 @set_offline
 async def free_cmd(client, message):
+	"""stop censoring someone
+
+	Stop censoring someone in current chat.
+	Use flag `-mass` to stop mass censorship current chat.
+	You can add `-i` to make target immune to mass censoring.
+	More than one target can be specified (separate with spaces).
+	Add `-list` flag to list immune users (censor immunity is global but doesn't bypass specific censorship).
+	Instead of specifying targets, you can reply to someone.
+	"""
 	global censoring
 	args = message.command
 	out = ""
@@ -187,19 +197,7 @@ async def get_user(arg, client):
 	else:
 		return await client.get_users(arg)
 
-HELP.add_help(["purge", "wipe", "clear"], "batch delete messages",
-				"delete messages last <n> messages (excluding this) sent by <targets> (can be a list of `@user`). If <n> is not given, will default to 1. " +
-				"If no target is given, messages from author of replied msg or self msgs will be deleted. You can give flag `-all` to delete from everyone. " +
-				"Search is limited to last 100 messages by default, add the `-full` flag to make an unbound (and maybe long, be careful!) search."
-				"A keyword (regex) can be specified (`-k`) so that only messages matching given pattern will be deleted. " +
-				"An offset can be specified with `-o`, to start deleting after a specific number of messages. " +
-				"A time frame can be given: you can limit deletion to messages before (`-before`) a certain time " +
-				"(all messages from now up to <time> ago), or after (`-after`) a certain interval (all messages older than <time>). " +
-				"Time can be given as a packed string like this : `8y3d4h15m3s` (years, days, hours, minutes, seconds), " +
-				"any individual token can be given in any position and all are optional, it can just be `30s` or `5m`. If " +
-				"you want to include spaces, wrap the 'time' string in `\"`. If you need to purge messages from an user without an @username, " +
-				"you can give its user id with the `-id` flag. If you need to provide more than 1 id, wrap them in `\"` and separate with a space.",
-				args="[-k <keyword>] [-o <n>] [-before <time>] [-after <time>] [-all] [-id <ids>] [<targets>] [<number>] [-full]", public=False)
+@HELP.add(cmd="[<targets>] [<number>]")
 @alemiBot.on_message(is_superuser & filterCommand(["purge", "wipe", "clear"], list(alemiBot.prefixes), options={
 	"keyword" : ["-k", "-keyword"],
 	"offset" : ["-o", "-offset"],
@@ -211,6 +209,23 @@ HELP.add_help(["purge", "wipe", "clear"], "batch delete messages",
 @report_error(logger)
 @set_offline
 async def purge_cmd(client, message):
+	"""batch delete messages
+
+	Delete messages last <n> messages (excluding this) sent by <targets> (can be a list of `@user`) matching given filters.
+	If <n> is not given, will default to 1.
+	If no target is given, messages from author of replied msg or self msgs will be deleted.
+	You can give flag `-all` to delete from everyone.
+	Search is limited to last 100 messages by default, add the `-full` flag to make an unbound (and maybe long, be careful!) search.
+	A keyword (regex) can be specified (`-k`) so that only messages matching given pattern will be deleted.eyboardInterrupt
+	An offset can be specified with `-o`, to start deleting after a specific number of messages.
+	A time frame can be given: you can limit deletion to messages before (`-before`) a certain time (all messages from now up to <time> ago), \
+	or after (`-after`) a certain interval (all messages older than <time>).
+	Time can be given as a packed string like this : `8y3d4h15m3s` (years, days, hours, minutes, seconds), \
+	any individual token can be given in any position and all are optional, it can just be `30s` or `5m`. If \
+	you want to include spaces, wrap the 'time' string in `\"`.
+	If you need to purge messages from an user without an @username, you can give its user id with the `-id` flag.
+	If you need to provide more than 1 id, wrap them in `\"` and separate with a space.
+	"""
 	args = message.command
 	target = []
 	opts = {}
@@ -263,3 +278,4 @@ async def purge_cmd(client, message):
 		if time_limit is not None and msg.date < time_limit:
 			break
 	await edit_or_reply(message, "` → ` Done")
+
