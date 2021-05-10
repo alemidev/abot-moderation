@@ -54,29 +54,28 @@ async def censor_cmd(client, message):
 	To free someone from censorship, use `.free` command.
 	"""
 	global censoring
-	args = message.command
 	out = ""
 	changed = False
-	if "-list" in args["flags"]:
+	if message.command["-list"]:
 		if message.chat.id not in censoring["SPEC"]:
 			out += "` → ` Nothing to display\n"
 		else:
 			usr_list = await client.get_users(censoring["SPEC"][message.chat.id])
 			for u in usr_list:
 				out += "` → ` {get_username(u)}\n"
-	elif "-mass" in args["flags"]:
+	elif message.command["-mass"]:
 		logger.info("Mass censoring chat")
 		if message.chat.id not in censoring["MASS"]:
 			censoring["MASS"].append(message.chat.id)
 			out += "` → ` Mass censoring\n"
 			changed = True
-	elif "cmd" in args or message.reply_to_message:
+	elif len(message.command) > 0 or message.reply_to_message:
 		logger.info("Censoring users")
 		users_to_censor = []
 		if message.reply_to_message:
 			users_to_censor.append(message.reply_to_message.from_user)
-		if "cmd" in args:
-			for target in args["cmd"]:
+		if len(message.command) > 0:
+			for target in message.command.arg:
 				if target == "-delme":
 					continue
 				if target.isnumeric():
@@ -86,7 +85,7 @@ async def censor_cmd(client, message):
 					out += f"`[!] → ` {target} not found\n"
 				else:
 					users_to_censor.append(usr)
-		if "-i" in args["flags"]:
+		if message.command["-i"]:
 			for u in users_to_censor:
 				if u.id in censoring["FREE"]:
 					censoring["FREE"].remove(u.id)
@@ -122,28 +121,27 @@ async def free_cmd(client, message):
 	Instead of specifying targets, you can reply to someone.
 	"""
 	global censoring
-	args = message.command
 	out = ""
 	changed = False
-	if "-list" in args["flags"]:
+	if message.command["-list"]:
 		if censoring["FREE"] == []:
 			out += "` → ` Nothing to display\n"
 		else:
 			immune_users = await client.get_users(censoring["FREE"])
 			for u in immune_users:
 				out += f"` → ` {get_username(u)}\n"
-	elif "-mass" in args["flags"]:
+	elif message.command["-mass"]:
 		logger.info("Disabling mass censorship")
 		censoring["MASS"].remove(message.chat.id)
 		out += "` → ` Restored freedom of speech\n"
 		changed = True
-	elif "cmd" in args or message.reply_to_message:
+	elif len(message.command) > 0 or message.reply_to_message:
 		logger.info("Freeing censored users")
 		users_to_free = []
 		if message.reply_to_message:
 			users_to_free.append(message.reply_to_message.from_user)
-		if "cmd" in args:
-			for target in args["cmd"]:
+		if len(message.command) > 0:
+			for target in message.command.arg:
 				if target == "-delme":
 					continue
 				if target.isnumeric():
@@ -153,7 +151,7 @@ async def free_cmd(client, message):
 					out += f"`[!] → ` {target} not found\n"
 				else:
 					users_to_free.append(usr)
-		if "-i" in args["flags"]:
+		if message.command["-i"]:
 			for u in users_to_free:
 				censoring["FREE"].append(u.id)
 				out += f"` → ` {get_username(u)} is now immune\n"
@@ -226,29 +224,28 @@ async def purge_cmd(client, message):
 	If you need to purge messages from an user without an @username, you can give its user id with the `-id` flag.
 	If you need to provide more than 1 id, wrap them in `\"` and separate with a space.
 	"""
-	args = message.command
 	target = []
 	opts = {}
 	number = 1
-	delete_all = "-all" in args["flags"]
-	keyword = re.compile(args["keyword"]) if "keyword" in args else None
-	offset = int(args["offset"]) if "offset" in args else 0
-	time_limit = time.time() - parse_timedelta(args["before"]).total_seconds() if \
-				"before" in args else None
-	hard_limit = "-full" not in args["flags"]
-	if "after" in args:
-		opts["offset_date"] = int(time.time() - parse_timedelta(args["after"]).total_seconds())
-	if "cmd" in args:
-		for a in args["cmd"]:
-			if a.startswith("@"):
-				if a == "@me":
+	delete_all = bool(message.command["-all"])
+	keyword = re.compile(message.command["keyword"]) if "keyword" in message.command else None
+	offset = int(message.command["offset"] or 0)
+	time_limit = time.time() - parse_timedelta(message.command["before"]).total_seconds() if \
+				"before" in message.command else None
+	hard_limit = message.command["-full"]
+	if "after" in message.command:
+		opts["offset_date"] = int(time.time() - parse_timedelta(message.command["after"]).total_seconds())
+	if len(message.command) > 0:
+		for arg in message.command.arg:
+			if arg.startswith("@"):
+				if arg == "@me":
 					target.append(message.from_user.id)
 				else:
-					target.append((await get_user(a, client)).id)
-			elif a.isnumeric():
-				number = int(a)
-	if "ids" in args:
-		for single_id in args["ids"].split():
+					target.append((await get_user(arg, client)).id)
+			elif arg.isnumeric():
+				number = int(arg)
+	if message.command["ids"]:
+		for single_id in message.command["ids"].split():
 			target.append(int(single_id))
 	
 	if not target:
