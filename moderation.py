@@ -107,7 +107,7 @@ async def censor_cmd(client, message):
 			json.dump(censoring, f)
 
 @HELP.add(cmd="[<targets>]")
-@alemiBot.on_message(is_superuser & filterCommand(["free", "f", "stop"], list(alemiBot.prefixes), flags=["-list", "-i", "-mass"]))
+@alemiBot.on_message(is_superuser & filterCommand(["free"], list(alemiBot.prefixes), flags=["-list", "-i", "-mass"]))
 @report_error(logger)
 @set_offline
 async def free_cmd(client, message):
