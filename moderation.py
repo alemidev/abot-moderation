@@ -197,12 +197,13 @@ async def get_user(arg, client):
 
 @HELP.add(cmd="[<targets>] [<number>]")
 @alemiBot.on_message(is_superuser & filterCommand(["purge", "wipe", "clear"], list(alemiBot.prefixes), options={
-	"keyword" : ["-k", "-keyword"],
-	"offset" : ["-o", "-offset"],
+	"group" : ["-g", "--group"],
+	"keyword" : ["-k", "--keyword"],
+	"offset" : ["-o", "--offset"],
 	"ids" : ["-id"],
-	"before" : ["-before"],
-	"after" : ["-after"],
-	"limit" : ["-lim"]
+	"before" : ["-before", "--before"],
+	"after" : ["-after", "--after"],
+	"limit" : ["-lim", "--lim"]
 }, flags=["-all", "-full"]))
 @report_error(logger)
 @set_offline
@@ -210,6 +211,7 @@ async def purge_cmd(client, message):
 	"""batch delete messages
 
 	Delete messages last <n> messages (excluding this) sent by <targets> (can be a list of `@user`) matching given filters.
+	Specify a different group with `-g <group>`.
 	If <n> is not given, will default to 1.
 	If no target is given, messages from author of replied msg or self msgs will be deleted.
 	You can give flag `-all` to delete from everyone.
@@ -227,12 +229,16 @@ async def purge_cmd(client, message):
 	target = []
 	opts = {}
 	number = 1
+	group = message.chat
 	delete_all = bool(message.command["-all"])
 	keyword = re.compile(message.command["keyword"]) if "keyword" in message.command else None
 	offset = int(message.command["offset"] or 0)
 	time_limit = time.time() - parse_timedelta(message.command["before"]).total_seconds() if \
 				"before" in message.command else None
 	hard_limit = message.command["-full"]
+	if message.command["group"]:
+		gid = message.command["group"]
+		group = await client.get_chat(int(gid) if gid.isnumeric() else gid)
 	if "after" in message.command:
 		opts["offset_date"] = int(time.time() - parse_timedelta(message.command["after"]).total_seconds())
 	if len(message.command) > 0:
@@ -257,7 +263,7 @@ async def purge_cmd(client, message):
 	logger.info(f"Purging last {number} message from {target}")
 	n = 0
 	total = 0
-	async for msg in client.iter_history(message.chat.id, **opts):
+	async for msg in client.iter_history(group.id, **opts):
 		total += 1
 		if hard_limit and total > max(100, number):
 			break
