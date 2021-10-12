@@ -235,7 +235,7 @@ async def purge_cmd(client, message):
 	offset = int(message.command["offset"] or 0)
 	time_limit = time.time() - parse_timedelta(message.command["before"]).total_seconds() if \
 				"before" in message.command else None
-	hard_limit = message.command["-full"]
+	hard_limit = not message.command["-full"]
 	if message.command["group"]:
 		gid = message.command["group"]
 		group = await client.get_chat(int(gid) if gid.isnumeric() else gid)
