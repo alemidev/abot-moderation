@@ -2,44 +2,44 @@ import os
 import re
 import time
 import json
+from typing import Dict, Union, List
 
 from pyrogram import filters
 from pyrogram.raw.functions.account import UpdateStatus
 
-from bot import alemiBot
+from alemibot import alemiBot
 
-from util.permission import is_superuser
-from util.message import edit_or_reply, is_me
-from util.command import filterCommand
-from util.time import parse_timedelta
-from util.getters import get_text, get_username
-from util.decorators import report_error, set_offline
-from util.help import HelpCategory
+from alemibot.util import (
+	sudo, edit_or_reply, is_me, filterCommand, parse_timedelta, get_text, get_username,
+	report_error, set_offline, HelpCategory
+)
 
 import logging
 logger = logging.getLogger(__name__)
 
 HELP = HelpCategory("MODERATION")
 
-censoring = {"MASS": [],
-			 "FREE": [],
-			 "SPEC" : {} }
+CENSORING : Dict[str, Union[List[int], Dict[int, str]]] = {
+	"MASS": [],
+	"FREE": [],
+	"SPEC" : {}
+}
 try: # TODO not use json, because int keys become strings and I need to recast them on load manually
 	with open("data/censoring.json") as f:
 		buf = json.load(f)
 		for k in buf["SPEC"]:
-			censoring["SPEC"][int(k)] = buf["SPEC"][k]
-		censoring["MASS"] = [ int(e) for e in buf["MASS"] ]
-		censoring["FREE"] = [ int(u) for u in buf["FREE"] ]
+			CENSORING["SPEC"][int(k)] = buf["SPEC"][k]
+		CENSORING["MASS"] = [ int(e) for e in buf["MASS"] ]
+		CENSORING["FREE"] = [ int(u) for u in buf["FREE"] ]
 except FileNotFoundError:
 	with open("data/censoring.json", "w") as f:
-		json.dump(censoring, f)
+		json.dump(CENSORING, f)
 except:
 	logger.exception("Failed to load ongoing censor data")
 	# ignore
 
 @HELP.add(cmd="[<targets>]")
-@alemiBot.on_message(is_superuser & filterCommand(["censor"], list(alemiBot.prefixes), flags=["-list", "-i", "-mass"]))
+@alemiBot.on_message(sudo & filterCommand(["censor"], flags=["-list", "-i", "-mass"]))
 @report_error(logger)
 @set_offline
 async def censor_cmd(client, message):
@@ -53,20 +53,20 @@ async def censor_cmd(client, message):
 	Instead of specifying targets, you can reply to someone.
 	To free someone from censorship, use `.free` command.
 	"""
-	global censoring
+	global CENSORING
 	out = ""
 	changed = False
 	if message.command["-list"]:
-		if message.chat.id not in censoring["SPEC"]:
+		if message.chat.id not in CENSORING["SPEC"]:
 			out += "` → ` Nothing to display\n"
 		else:
-			usr_list = await client.get_users(censoring["SPEC"][message.chat.id])
+			usr_list = await client.get_users(CENSORING["SPEC"][message.chat.id])
 			for u in usr_list:
 				out += "` → ` {get_username(u)}\n"
 	elif message.command["-mass"]:
 		logger.info("Mass censoring chat")
-		if message.chat.id not in censoring["MASS"]:
-			censoring["MASS"].append(message.chat.id)
+		if message.chat.id not in CENSORING["MASS"]:
+			CENSORING["MASS"].append(message.chat.id)
 			out += "` → ` Mass censoring\n"
 			changed = True
 	elif len(message.command) > 0 or message.reply_to_message:
@@ -87,15 +87,15 @@ async def censor_cmd(client, message):
 					users_to_censor.append(usr)
 		if message.command["-i"]:
 			for u in users_to_censor:
-				if u.id in censoring["FREE"]:
-					censoring["FREE"].remove(u.id)
+				if u.id in CENSORING["FREE"]:
+					CENSORING["FREE"].remove(u.id)
 					out += f"` → ` {get_username(u)} is no longer immune\n"
 					changed = True
 		else:
 			for u in users_to_censor:
-				if message.chat.id not in censoring["SPEC"]:
-					censoring["SPEC"][message.chat.id] = []
-				censoring["SPEC"][message.chat.id].append(u.id)
+				if message.chat.id not in CENSORING["SPEC"]:
+					CENSORING["SPEC"][message.chat.id] = []
+				CENSORING["SPEC"][message.chat.id].append(u.id)
 				out += f"` → ` Censoring {get_username(u)}\n"
 				changed = True
 	if out != "":
@@ -107,7 +107,7 @@ async def censor_cmd(client, message):
 			json.dump(censoring, f)
 
 @HELP.add(cmd="[<targets>]")
-@alemiBot.on_message(is_superuser & filterCommand(["free"], list(alemiBot.prefixes), flags=["-list", "-i", "-mass"]))
+@alemiBot.on_message(sudo & filterCommand(["free"], flags=["-list", "-i", "-mass"]))
 @report_error(logger)
 @set_offline
 async def free_cmd(client, message):
@@ -120,19 +120,19 @@ async def free_cmd(client, message):
 	Add `-list` flag to list immune users (censor immunity is global but doesn't bypass specific censorship).
 	Instead of specifying targets, you can reply to someone.
 	"""
-	global censoring
+	global CENSORING
 	out = ""
 	changed = False
 	if message.command["-list"]:
-		if censoring["FREE"] == []:
+		if CENSORING["FREE"] == []:
 			out += "` → ` Nothing to display\n"
 		else:
-			immune_users = await client.get_users(censoring["FREE"])
+			immune_users = await client.get_users(CENSORING["FREE"])
 			for u in immune_users:
 				out += f"` → ` {get_username(u)}\n"
 	elif message.command["-mass"]:
 		logger.info("Disabling mass censorship")
-		censoring["MASS"].remove(message.chat.id)
+		CENSORING["MASS"].remove(message.chat.id)
 		out += "` → ` Restored freedom of speech\n"
 		changed = True
 	elif len(message.command) > 0 or message.reply_to_message:
@@ -153,13 +153,13 @@ async def free_cmd(client, message):
 					users_to_free.append(usr)
 		if message.command["-i"]:
 			for u in users_to_free:
-				censoring["FREE"].append(u.id)
+				CENSORING["FREE"].append(u.id)
 				out += f"` → ` {get_username(u)} is now immune\n"
 				changed = True
 		else:
 			for u in users_to_free:
-				if u.id in censoring["SPEC"][message.chat.id]:
-					censoring["SPEC"][message.chat.id].remove(u.id)
+				if u.id in CENSORING["SPEC"][message.chat.id]:
+					CENSORING["SPEC"][message.chat.id].remove(u.id)
 					out += f"` → ` Freeing {get_username(u)}\n"
 					changed = True
 	if out != "":
@@ -178,13 +178,13 @@ async def bully(client, message):
 		return # can't censor messages outside of chats or from self
 	if message.from_user is None:
 		return # Don't censory anonymous msgs
-	if message.chat.id in censoring["MASS"] \
-	and message.from_user.id not in censoring["FREE"]:
+	if message.chat.id in CENSORING["MASS"] \
+	and message.from_user.id not in CENSORING["FREE"]:
 		await message.delete()
 		await client.send(UpdateStatus(offline=True))
 	else:
-		if message.chat.id not in censoring["SPEC"] \
-		or message.from_user.id not in censoring["SPEC"][message.chat.id]:
+		if message.chat.id not in CENSORING["SPEC"] \
+		or message.from_user.id not in CENSORING["SPEC"][message.chat.id]:
 			return # Don't censor innocents!
 		await message.delete()
 		await client.send(UpdateStatus(offline=True))
@@ -196,7 +196,7 @@ async def get_user(arg, client):
 		return await client.get_users(arg)
 
 @HELP.add(cmd="[<targets>] [<number>]")
-@alemiBot.on_message(is_superuser & filterCommand(["purge", "wipe", "clear"], list(alemiBot.prefixes), options={
+@alemiBot.on_message(sudo & filterCommand(["purge", "wipe", "clear"], options={
 	"group" : ["-g", "--group"],
 	"keyword" : ["-k", "--keyword"],
 	"offset" : ["-o", "--offset"],
