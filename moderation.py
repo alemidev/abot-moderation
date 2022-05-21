@@ -267,7 +267,7 @@ async def purge_cmd(client, message):
 		total += 1
 		if hard_limit and total > max(100, number):
 			break
-		if msg.message_id == message.message_id: # ignore message that triggered this
+		if msg.id == message.id: # ignore message that triggered this
 			continue
 		if ((delete_all or msg.from_user.id in target)
 		and (not keyword or keyword.search(get_text(msg)))): # wait WTF why no raw here
