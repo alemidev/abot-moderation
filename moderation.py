@@ -263,7 +263,7 @@ async def purge_cmd(client, message):
 	logger.info(f"Purging last {number} message from {target}")
 	n = 0
 	total = 0
-	async for msg in client.iter_history(group.id, **opts):
+	async for msg in client.get_history(group.id, **opts):
 		total += 1
 		if hard_limit and total > max(100, number):
 			break
