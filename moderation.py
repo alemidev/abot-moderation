@@ -269,8 +269,15 @@ async def purge_cmd(client, message):
 			break
 		if msg.id == message.id: # ignore message that triggered this
 			continue
-		if ((delete_all or msg.from_user.id in target)
-		and (not keyword or keyword.search(get_text(msg)))): # wait WTF why no raw here
+		if (
+			(
+				delete_all
+				or (msg.from_user and msg.from_user.id in target)
+				or (msg.sender_chat and msg.sender_chat.id in target)
+			) and (
+				not keyword or keyword.search(get_text(msg))
+			)
+		):
 			if offset > 0: # do an offset like this because
 				offset -=1 #  we want to offset messages from target user, not all messages
 				continue
