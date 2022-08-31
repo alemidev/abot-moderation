@@ -3,6 +3,7 @@ import re
 import time
 import json
 from typing import Dict, Union, List
+from datetime import datetime
 
 from pyrogram import filters
 from pyrogram.raw.functions.account import UpdateStatus
@@ -240,7 +241,7 @@ async def purge_cmd(client, message):
 		gid = message.command["group"]
 		group = await client.get_chat(int(gid) if gid.isnumeric() else gid)
 	if "after" in message.command:
-		opts["offset_date"] = int(time.time() - parse_timedelta(message.command["after"]).total_seconds())
+		opts["offset_date"] = datetime.now() - parse_timedelta(message.command["after"])
 	if len(message.command) > 0:
 		for arg in message.command.arg:
 			if arg.startswith("@"):
