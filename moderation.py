@@ -285,7 +285,7 @@ async def purge_cmd(client, message):
 			n += 1
 		if n >= number:
 			break
-		if time_limit is not None and msg.date < time_limit:
+		if time_limit is not None and msg.date.timestamp() < time_limit:
 			break
 	await edit_or_reply(message, "` → ` Done")
 
