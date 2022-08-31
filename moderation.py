@@ -43,7 +43,7 @@ except:
 @alemiBot.on_message(sudo & filterCommand(["censor"], flags=["-list", "-i", "-mass"]))
 @report_error(logger)
 @set_offline
-async def censor_cmd(client, message):
+async def censor_cmd(client: alemiBot, message):
 	"""delete messages sent by user
 
 	Start censoring someone in current chat.
@@ -105,13 +105,13 @@ async def censor_cmd(client, message):
 		await edit_or_reply(message, "` → ` Nothing to display")
 	if changed:
 		with open("data/censoring.json", "w") as f:
-			json.dump(censoring, f)
+			json.dump(CENSORING, f)
 
 @HELP.add(cmd="[<targets>]")
 @alemiBot.on_message(sudo & filterCommand(["free"], flags=["-list", "-i", "-mass"]))
 @report_error(logger)
 @set_offline
-async def free_cmd(client, message):
+async def free_cmd(client:alemiBot, message):
 	"""stop censoring someone
 
 	Stop censoring someone in current chat.
@@ -169,7 +169,7 @@ async def free_cmd(client, message):
 		await edit_or_reply(message, "` → ` Nothing to display")
 	if changed:
 		with open("data/censoring.json", "w") as f:
-			json.dump(censoring, f)
+			json.dump(CENSORING, f)
 
 @alemiBot.on_message(group=9)
 async def bully(client, message):
@@ -204,7 +204,6 @@ async def get_user(arg, client):
 	"ids" : ["-id"],
 	"before" : ["-before", "--before"],
 	"after" : ["-after", "--after"],
-	"limit" : ["-lim", "--lim"]
 }, flags=["-all", "-full"]))
 @report_error(logger)
 @set_offline
@@ -234,8 +233,7 @@ async def purge_cmd(client, message):
 	delete_all = bool(message.command["-all"])
 	keyword = re.compile(message.command["keyword"]) if "keyword" in message.command else None
 	offset = int(message.command["offset"] or 0)
-	time_limit = time.time() - parse_timedelta(message.command["before"]).total_seconds() if \
-				"before" in message.command else None
+	time_limit = datetime.now() - parse_timedelta(message.command["before"]) if "before" in message.command else None
 	hard_limit = not message.command["-full"]
 	if message.command["group"]:
 		gid = message.command["group"]
@@ -286,7 +284,7 @@ async def purge_cmd(client, message):
 			n += 1
 		if n >= number:
 			break
-		if time_limit is not None and msg.date.timestamp() < time_limit:
+		if time_limit is not None and msg.date < time_limit:
 			break
-	await edit_or_reply(message, "` → ` Done")
+	await edit_or_reply(message, f"` → ` Done: **{n}/{total}** deleted")
 
