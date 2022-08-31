@@ -212,7 +212,7 @@ async def purge_cmd(client, message):
 
 	Delete messages last <n> messages (excluding this) sent by <targets> (can be a list of `@user`) matching given filters.
 	Specify a different group with `-g <group>`.
-	If <n> is not given, will default to 1.
+	If <n> is not given, will default to 1. If <n> is -1, continue until messages end.
 	If no target is given, messages from author of replied msg or self msgs will be deleted.
 	You can give flag `-all` to delete from everyone.
 	Search is limited to last 100 messages by default, add the `-full` flag to make an unbound (and maybe long, be careful!) search.
@@ -263,11 +263,15 @@ async def purge_cmd(client, message):
 	n = 0
 	total = 0
 	async for msg in client.get_chat_history(group.id, **opts):
-		total += 1
-		if hard_limit and total > max(100, number):
-			break
 		if msg.id == message.id: # ignore message that triggered this
 			continue
+		if hard_limit and total >= max(100, number):
+			break
+		if number > 0 and n >= number:
+			break
+		if time_limit is not None and msg.date < time_limit:
+			break
+		total += 1
 		if (
 			(
 				delete_all
@@ -282,9 +286,5 @@ async def purge_cmd(client, message):
 				continue
 			await msg.delete()
 			n += 1
-		if n >= number:
-			break
-		if time_limit is not None and msg.date < time_limit:
-			break
 	await edit_or_reply(message, f"` → ` Done: **{n}/{total}** deleted")
 
